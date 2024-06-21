@@ -71,8 +71,7 @@ defmodule ChromicPDF.ChromeRunner do
     "/usr/bin/google-chrome",
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     "/Applications/Chromium.app/Contents/MacOS/Chromium",
-    "chrome",
-    "chromedriver"
+    "chrome"
   ]
 
   defp executable(opts \\ []) do
