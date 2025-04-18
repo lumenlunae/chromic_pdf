@@ -268,7 +268,8 @@ defmodule ChromicPDF do
 
   ## Chrome options
 
-  By default, ChromicPDF will try to run a Chrome instance in the local environment. The following options allow to customize the generated command line.
+  By default, ChromicPDF will try to run a Chrome instance in the local environment. The
+  following options allow to customize the generated command line.
 
   ### Custom command line switches
 
@@ -276,6 +277,17 @@ defmodule ChromicPDF do
 
       defp chromic_pdf_opts do
         [chrome_args: "--font-render-hinting=none"]
+      end
+
+  In some cases, ChromicPDF's default arguments (e.g. `--disable-gpu`) may conflict with the ones
+  you would like to add. In this case, use can supply a keyword list to the `:chrome_args` option
+  which allows targeted removing of default arguments.
+
+      defp chromic_pdf_opts do
+        [chrome_args: [
+          append: "--headless=new --angle=swiftshader",
+          remove: ["--headless", "--disable-gpu"]
+        ]]
       end
 
   The `:chrome_executable` option allows to specify a custom Chrome/Chromium executable.

@@ -28,13 +28,13 @@ defmodule ChromicPDF.ChromeRunner do
 
   @spec version() :: binary()
   def version do
-    with_app_config_cache(:chrome_version, &do_version/0)
+    :chrome_version
+    |> with_app_config_cache(&get_version_from_chrome/0)
+    |> extract_version()
   end
 
-  defp do_version do
-    output = system_cmd!(executable(), ["--version"], stderr_to_stdout: true)
-    [version] = Regex.run(~r/\d+\.\d+\.\d+\.\d+/, output)
-    version
+  defp get_version_from_chrome do
+    system_cmd!(executable(), ["--version"], stderr_to_stdout: true)
   rescue
     e ->
       reraise(
@@ -57,15 +57,25 @@ defmodule ChromicPDF.ChromeRunner do
       )
   end
 
-  defp shell_command(extra_args, opts) do
+  defp extract_version(value) do
+    [version] = Regex.run(~r/\d+\.\d+\.\d+\.\d+/, value)
+    version
+  end
+
+  # Public for unit tests.
+  @doc false
+  @spec shell_command(keyword()) :: binary()
+  @spec shell_command(binary() | [binary()], keyword()) :: binary()
+  def shell_command(extra_args \\ "", opts) do
     Enum.join([~s("#{executable(opts)}") | args(extra_args, opts)], " ")
   end
 
   @default_executables [
     "chromium-browser",
     "chromium",
-    "chrome.exe",
     "google-chrome",
+    "chrome",
+    "chrome.exe",
     "/usr/bin/chromium-browser",
     "/usr/bin/chromium",
     "/usr/bin/google-chrome",
@@ -148,13 +158,30 @@ defmodule ChromicPDF.ChromeRunner do
   defp args(extra, opts) do
     default_args()
     |> append_if("--no-sandbox", no_sandbox?(opts))
-    |> append_if(to_string(opts[:chrome_args]), !!opts[:chrome_args])
+    |> apply_chrome_args(opts[:chrome_args])
     |> Kernel.++(List.wrap(extra))
     |> append_if("2>/dev/null 3<&0 4>&1", discard_stderr?(opts))
   end
 
   defp append_if(list, _value, false), do: list
-  defp append_if(list, value, true), do: list ++ [value]
+  defp append_if(list, value, true), do: append(list, value)
+
+  defp append(list, value), do: list ++ List.wrap(value)
+
+  defp apply_chrome_args(list, nil), do: list
+
+  defp apply_chrome_args(list, chrome_args) when is_binary(chrome_args) do
+    append(list, chrome_args)
+  end
+
+  defp apply_chrome_args(list, extended) when is_list(extended) do
+    append = Keyword.get(extended, :append, [])
+    remove = Keyword.get(extended, :remove, []) |> List.wrap()
+
+    list
+    |> Enum.reject(&Enum.member?(remove, &1))
+    |> append(append)
+  end
 
   defp no_sandbox?(opts), do: Keyword.get(opts, :no_sandbox, false)
   defp discard_stderr?(opts), do: Keyword.get(opts, :discard_stderr, true)

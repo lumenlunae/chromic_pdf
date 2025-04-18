@@ -1,3 +1,35 @@
+## Unreleased
+
+### Added
+
+- `print_to_pdf` now supports a `:timezone` option to set the timezone before navigating with `Emulation.setTimezoneOverride`
+
+## [1.17.0] - 2024-08-09
+
+### Changed
+
+- Some of the types have been renamed, e.g. `ChromicPDF.export_option` to `shared_option`.
+
+### Fixed
+
+- Small fix `:chrome_version` config switch allowing to pass `Chrome x.y.z.zz` instead of just `x.y.z.zz`
+
+### Added
+
+- Support custom protocols through `:protocol` option on `print_to_pdf/2` and `capture_screenshot`, as well as new `ChromicPDF.run_protocol/2` function. These features are considered internal API.
+
+## [1.16.1] - 2024-07-25
+
+### Added
+
+- Extend `chrome_args` to allow removal of conflicting default args. Allows for use cases which were previously blocked by defaults such as rendering WebGL images. See #314 (@walter)
+
+## [1.16.0] - 2024-06-25
+
+### Changed
+
+- Removed the `-dCompatibilityLevel=1.4` default switch from the ghostscript processor. Ghostscript has defaulted to to 1.7 for a long time now and we have been keeping this flag since GS 9.xx which likely not many people are using anymore. If anyone needs it, a new `:compatibility_level` option can used to set it back to 1.4.
+
 ## [1.15.2] - 2024-01-04
 
 ### Changed

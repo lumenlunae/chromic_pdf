@@ -146,17 +146,17 @@ defmodule ChromicPDF.Supervisor do
       @type source_and_options :: %{source: source_tuple(), opts: [pdf_option()]}
       @type source :: source() | source_and_options()
 
+      @type protocol_option :: {any(), any()}
+
       @type output_function_result :: any()
-      @type output_function :: (binary() -> output_function_result())
+      @type output_function :: (any() -> output_function_result())
       @type output_option :: {:output, binary()} | {:output, output_function()}
 
-      @type telemetry_metadata_option :: {:telemetry_metadata, map()}
-
-      @type export_option ::
+      @type shared_option ::
               output_option()
-              | telemetry_metadata_option()
+              | {:telemetry_metadata, map()}
 
-      @type export_return :: :ok | {:ok, binary()} | {:ok, output_function_result()}
+      @type result :: :ok | {:ok, any()} | {:ok, output_function_result()}
 
       @type info_option ::
               {:info,
@@ -184,13 +184,16 @@ defmodule ChromicPDF.Supervisor do
               | {:assigns, map()}
               | evaluate_option()
               | wait_for_option()
+              | {:timezone, String.t()}
 
       @type pdf_option ::
               {:print_to_pdf, map()}
+              | {:protocol, module()}
               | navigate_option()
 
       @type pdfa_option ::
               {:pdfa_version, binary()}
+              | {:compatibility_level, binary()}
               | {:pdfa_def_ext, binary()}
               | {:permit_read, binary()}
               | info_option()
@@ -198,6 +201,7 @@ defmodule ChromicPDF.Supervisor do
       @type capture_screenshot_option ::
               {:capture_screenshot, map()}
               | {:full_page, boolean()}
+              | {:protocol, module()}
               | navigate_option()
 
       @type session_option ::
@@ -219,13 +223,17 @@ defmodule ChromicPDF.Supervisor do
 
       @type ghostscript_pool_option :: {:size, non_neg_integer()}
 
+      @type extended_chrome_args :: [
+              {:append, binary() | [binary()]} | {:remove, binary() | [binary()]}
+            ]
+
       @typedoc """
       These options apply to local Chrome instances only.
       """
       @type local_chrome_option ::
               {:no_sandbox, boolean()}
               | {:discard_stderr, boolean()}
-              | {:chrome_args, binary()}
+              | {:chrome_args, binary() | extended_chrome_args()}
               | {:chrome_executable, binary()}
 
       @typedoc """
@@ -586,9 +594,9 @@ defmodule ChromicPDF.Supervisor do
 
           ChromicPDF.print_to_pdf({:url, "http:///example.net"}, wait_for: wait_for)
       '''
-      @spec print_to_pdf(source() | [source()]) :: export_return()
-      @spec print_to_pdf(source() | [source()], [pdf_option() | export_option()]) ::
-              export_return()
+      @spec print_to_pdf(source() | [source()]) :: result()
+      @spec print_to_pdf(source() | [source()], [pdf_option() | shared_option()]) ::
+              result()
       def print_to_pdf(source, opts \\ []) do
         with_services(&API.print_to_pdf(&1, source, opts))
       end
@@ -629,11 +637,18 @@ defmodule ChromicPDF.Supervisor do
             full_page: true
           )
       """
-      @spec capture_screenshot(source()) :: export_return()
-      @spec capture_screenshot(source(), [capture_screenshot_option() | export_option()]) ::
-              export_return()
+      @spec capture_screenshot(source()) :: result()
+      @spec capture_screenshot(source(), [capture_screenshot_option() | shared_option()]) ::
+              result()
       def capture_screenshot(source, opts \\ []) do
         with_services(&API.capture_screenshot(&1, source, opts))
+      end
+
+      @doc false
+      @spec run_protocol(module()) :: result()
+      @spec run_protocol(module(), [shared_option() | protocol_option()]) :: result()
+      def run_protocol(protocol, opts \\ []) do
+        with_services(&API.run_protocol(&1, protocol, opts))
       end
 
       @doc """
@@ -719,8 +734,8 @@ defmodule ChromicPDF.Supervisor do
       ("Tags") and hence disables accessibility features of assistive technologies. See
       [On Accessibility / PDF/UA](#module-on-accessibility-pdf-ua) section for details.
       """
-      @spec convert_to_pdfa(path()) :: export_return()
-      @spec convert_to_pdfa(path(), [pdfa_option()]) :: export_return()
+      @spec convert_to_pdfa(path()) :: result()
+      @spec convert_to_pdfa(path(), [pdfa_option()]) :: result()
       def convert_to_pdfa(pdf_path, opts \\ []) do
         with_services(&API.convert_to_pdfa(&1, pdf_path, opts))
       end
@@ -734,9 +749,9 @@ defmodule ChromicPDF.Supervisor do
 
           ChromicPDF.print_to_pdfa({:url, "https://example.net"})
       """
-      @spec print_to_pdfa(source() | [source()]) :: export_return()
-      @spec print_to_pdfa(source() | [source()], [pdf_option() | pdfa_option() | export_option()]) ::
-              export_return()
+      @spec print_to_pdfa(source() | [source()]) :: result()
+      @spec print_to_pdfa(source() | [source()], [pdf_option() | pdfa_option() | shared_option()]) ::
+              result()
       def print_to_pdfa(source, opts \\ []) do
         with_services(&API.print_to_pdfa(&1, source, opts))
       end
